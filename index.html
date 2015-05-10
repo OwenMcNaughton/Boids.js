@@ -13,14 +13,14 @@
 		<script src="js/Vector.js"></script>
 		<script>
 			
-			var v1 = new Vector(5.1, 3.1);
-			var v2 = new Vector(1.7, 2.5);
+			var v1 = new Vector(5.1, 3.1, 4.3);
+			var v2 = new Vector(1.7, 2.5, 7.5);
 			
-			v1.normalize();
-			console.log(v1.x + ", " + v1.y);
+			//v1.normalize();
+			console.log(v1.x + ", " + v1.y + ", " + v1.z);
 			
-			v1.limit(.4);
-			console.log(v1.x + ", " + v1.y);
+			//v1.limit(.4);
+			console.log(v1.x + ", " + v1.y + ", " + v1.z);
 			
 			var distance = v1.dist(v2);
 			console.log(distance);

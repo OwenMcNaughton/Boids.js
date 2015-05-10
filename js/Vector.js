@@ -1,10 +1,11 @@
-function Vector(x, y) {
+function Vector(x, y, z) {
     this.x = x;
     this.y = y;
+    this.z = z;
 }
 
 Vector.prototype.mag = function() {
-    return Math.sqrt(this.x*this.x + this.y*this.y);
+    return Math.sqrt(this.x*this.x + this.y*this.y + this.z*this.z);
 };
 
 Vector.prototype.normalize = function() {
@@ -12,6 +13,7 @@ Vector.prototype.normalize = function() {
     if(m != 0 && m != 1) {
         this.x /= m;
         this.y /= m;
+        this.z /= m;
     }
 };
 
@@ -20,13 +22,16 @@ Vector.prototype.limit = function(max) {
         this.normalize();
         this.x *= max;
         this.y *= max;
+        this.z *= max;
     }
 };
 
 Vector.prototype.dist = function(v2) {
-    var dx = this.x - v2.x;
-    var dy = this.y - v2.y;
-    return Math.sqrt(dx*dx + dy*dy);
+    var dx = v2.x - this.x;
+    var dy = v2.y - this.y;
+    var dz = v2.z - this.z;
+    var dx2 = dx*dx; var dy2 = dy*dy; var dz2 = dz*dz;
+    return Math.sqrt(dx*dx + dy*dy + dz*dz);
 };
 
 Vector.prototype.angle = function() {

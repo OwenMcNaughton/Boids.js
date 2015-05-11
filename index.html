@@ -7,16 +7,23 @@
 		</style>
 	</head>
 	<body>
+		
 		<script src="js/three.min.js"></script>
 		<script src="js/stats.js"></script>
 		<script src="js/OrbitControls.js"></script>
 		<script src="js/Detector.js"></script>
+		<script src="js/FirstPersonControls.js"></script>
+		<script src="js/KeyboardState.js"></script>
 		
 		<script src="js/Vector.js"></script>
 		<script src="js/Boid.js"></script>
 		<script>
 
-var camera, controls, scene, renderer, loader, stats, boids, bgroup, goahead;
+var camera, controls, scene, renderer, loader, stats, clock;
+
+var boids, bgroup, target, targetvel, goahead, count, count2, keyboard;
+
+var boidGeometry, boidMaterial;
 
 goahead = false;
 
@@ -26,69 +33,23 @@ render();
 function animate() {
 	requestAnimationFrame(animate);
 	controls.update();
-	render();
+	//render();
 }
 
 function init() {
-	var pos = new Vector(1, 3, 4);
-	var vel = new Vector(12, 32, 42);
-	var rot = new Vector(4, 5, 7);
-	var b = new Boid(pos, vel, rot);
+	clock = new THREE.Clock();
 	
-	console.log(b.pos.x + " " + b.vel.y + " " + b.rot.z);
+	count = 0;
 	
 	camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
 	camera.position.z = 100;
 
-	controls = new THREE.OrbitControls(camera);
-	controls.damping = 0.2;
-    controls.addEventListener('change', render);
+	setupOrbitControls();
 
 	scene = new THREE.Scene();
-	scene.fog = new THREE.FogExp2(0xcccccc, 0.001);
+	scene.fog = new THREE.FogExp2(0xcccccc, 0.003);
 
-	boids = [];
-	bgroup = new THREE.Group();
-	loader = new THREE.JSONLoader();
-	loader.load('models/ball.json', function (geometry) {
-		THREE.GeometryUtils.center(geometry);
-		var material = new THREE.MeshLambertMaterial({color: 0xcc4444});
-		
-		for(var i = 0; i != 500; i++) {
-			mesh = new THREE.Mesh(geometry, material);
-			
-			var posx = Math.random() * 100 - 50;
-			var posy = Math.random() * 100 - 50;
-			var posz = Math.random() * 100 - 50;
-			
-			var rotx = 0;
-			var roty = 0;
-			var rotz = 0;
-			
-			var pos = new Vector(posx, posy, posz);
-			var rot = new Vector(rotx, roty, rotz);
-			var vel = new Vector(0, 0, 0);
-			
-			mesh.position.x = pos.x;
-			mesh.position.y = pos.y;
-			mesh.position.z = pos.z;
-			
-			mesh.rotation.x = rot.x;
-			mesh.rotation.y = rot.y;
-			mesh.rotation.z = rot.z;
-			
-			var boid = new Boid(pos, rot, vel);
-			
-			boids.push(boid);
-			bgroup.add(mesh);
-			
-			if(i == 99) {
-				goahead = true;
-			}
-		}
-	});
-	
-	scene.add(bgroup);
+	keyboard = new THREEx.KeyboardState();
 	
 	var light1 = new THREE.DirectionalLight(0xeeeeee);
 	light1.position.x = Math.random() - 0.5;
@@ -103,7 +64,7 @@ function init() {
 	light2.position.y = Math.random() - 0.5;
 	light2.position.z = Math.random() - 0.5;
 	light2.position.normalize();
-	light2.intensity = 1.5;
+	light2.intensity = 1;
 	scene.add(light2);
 	
 	renderer = new THREE.WebGLRenderer();
@@ -120,37 +81,244 @@ function init() {
 	
 	window.addEventListener('resize', onWindowResize, false);
 
+	//loadTarget();
+	loadBoids(400);
+	
+	addContext();
+
 	animate();
+}
+
+function setupOrbitControls() {
+	controls = new THREE.OrbitControls(camera);
+	controls.damping = 0.2;
+    controls.addEventListener('change', render);
+}
+
+function setupFirstPersonControls() {
+	controls = new THREE.FirstPersonControls(camera);
+    controls.lookSpeed = 0.3;
+    controls.movementSpeed = 50;
+    controls.noFly = true;
+    controls.lookVertical = true;
+    controls.constrainVertical = true;
+    controls.verticalMin = .1;
+    controls.verticalMax = 5;
+    controls.lon = -150;
+    controls.lat = 120;
+}
+
+function addContext() {
+	var cubeGeometry = new THREE.SphereGeometry(500, 16, 16);
+	var dashMaterial = new THREE.LineDashedMaterial( { color: 0x000000, dashSize: 2, gapSize: 3 } );
+	
+	var cube = new THREE.Line(geo2line(cubeGeometry), dashMaterial, THREE.LinePieces);
+	cube.position.set(0, 0, 0);
+	scene.add(cube);
+}
+
+function geo2line( geo ) // credit to WestLangley!
+{
+    var geometry = new THREE.Geometry();
+    var vertices = geometry.vertices;
+	
+	for ( i = 0; i < geo.faces.length; i++ ) 
+	{
+        var face = geo.faces[ i ];
+        if ( face instanceof THREE.Face3 ) 
+		{
+            var a = geo.vertices[ face.a ].clone();
+			var b = geo.vertices[ face.b ].clone();
+			var c = geo.vertices[ face.c ].clone();
+            vertices.push( a,b, b,c, c,a );
+        } 
+		else if ( face instanceof THREE.Face4 ) 
+		{
+			var a = geo.vertices[ face.a ].clone();
+			var b = geo.vertices[ face.b ].clone();
+			var c = geo.vertices[ face.c ].clone();
+			var d = geo.vertices[ face.d ].clone();
+            vertices.push( a,b, b,c, c,d, d,a );
+        }
+    }
+    geometry.computeLineDistances();
+    return geometry;
+}
+
+function loadTarget() {
+	loader = new THREE.JSONLoader();
+	loader.load('models/ball.json', function (geometry) {
+		THREE.GeometryUtils.center(geometry);
+		var material = new THREE.MeshLambertMaterial({color: 0x44cc44});
+		
+	 	target = new THREE.Mesh(geometry, material);
+		target.scale.set(3, 3, 3);
+		
+		target.position.x = Math.random() * 200 - 100;
+		target.position.y = Math.random() * 200 - 100;
+		target.position.z = Math.random() * 200 - 100;
+		
+		targetvel = new Vector(Math.random() * .4 - .2,
+							   Math.random() * .4 - .2,
+							   Math.random() * .4 - .2);
+							   
+		scene.add(target);
+	});
+}
+
+function loadBoids(amount) {
+	boids = [];
+	bgroup = new THREE.Group();
+	loader = new THREE.JSONLoader();
+	loader.load('models/vector.json', function (geometry) {
+		THREE.GeometryUtils.center(geometry);
+		boidGeometry = geometry;
+		boidMaterial = new THREE.MeshLambertMaterial({color: 0xcc4444});
+		
+		for(var i = 0; i != amount; i++) {
+			mesh = new THREE.Mesh(geometry, boidMaterial);
+			var posx = Math.random() * 300 - 150;
+			var posy = Math.random() * 300 - 150;
+			var posz = Math.random() * 300 - 150;
+			
+			var rotx = 0;
+			var roty = 0;
+			var rotz = 0;
+			
+			var pos = new Vector(posx, posy, posz);
+			var rot = new Vector(rotx, roty, rotz);
+			var vel = new Vector(Math.random() * 10 - .5,
+							     Math.random() * 10 - .5,
+							     Math.random() * 10 - .5);
+			
+			mesh.position.x = pos.x;
+			mesh.position.y = pos.y;
+			mesh.position.z = pos.z;
+			
+			mesh.rotation.x = rot.x;
+			mesh.rotation.y = rot.y;
+			mesh.rotation.z = rot.z;
+			
+			var boid = new Boid(pos, rot, vel);
+			
+			boids.push(boid);
+			bgroup.add(mesh);
+			
+			if(i == amount-1) {
+				goahead = true;
+			}
+		}
+	});
+	
+	scene.add(bgroup);
+}
+
+function addBoid() {
+	var mesh = new THREE.Mesh(boidGeometry, boidMaterial);
+	var posx = Math.random() * 100 - 50;
+	var posy = Math.random() * 100 - 50;
+	var posz = Math.random() * 100 - 50;
+	
+	var rotx = 0;
+	var roty = 0;
+	var rotz = 0;
+	
+	var pos = new Vector(posx, posy, posz);
+	var rot = new Vector(rotx, roty, rotz);
+	var vel = new Vector(Math.random() * 10 - .5,
+					     Math.random() * 10 - .5,
+					     Math.random() * 10 - .5);
+	
+	mesh.position.x = pos.x;
+	mesh.position.y = pos.y;
+	mesh.position.z = pos.z;
+	
+	mesh.rotation.x = rot.x;
+	mesh.rotation.y = rot.y;
+	mesh.rotation.z = rot.z;
+	
+	var boid = new Boid(pos, rot, vel);
+	
+	boids.push(boid);
+	bgroup.add(mesh);
+	scene.add(bgroup);
 }
 
 function onWindowResize() {
 	camera.aspect = window.innerWidth / window.innerHeight;
 	camera.updateProjectionMatrix();
-
 	renderer.setSize(window.innerWidth, window.innerHeight);
-
-	//render();
 }
 
 function render() {
+	var delta = clock.getDelta();
+	
 	renderer.render(scene, camera);
 	stats.update();
+	//controls.update();
 	
 	if(goahead) {
-		for(var i = 0; i != bgroup.children.length; i++) {
-			boids[i].update(boids);
-			
-			bgroup.children[i].position.x = boids[i].pos.x;
-			bgroup.children[i].position.y = boids[i].pos.y;
-			bgroup.children[i].position.z = boids[i].pos.z;
-			
-			bgroup.children[i].rotation.x = boids[i].rot.x;
-			bgroup.children[i].rotation.y = boids[i].rot.y;
-			bgroup.children[i].rotation.z = boids[i].rot.z;
+		boidsUpdate();
+		//targetUpdate();
+		
+		
+		if(keyboard.pressed("space")) {
+			var center = new THREE.Vector3(0, 0, 0);
+			for(var i = 0; i != bgroup.children.length; i++) {
+				center.add(bgroup.children[i].position);
+			}
+			center.divideScalar(bgroup.children.length);
+			camera.lookAt(center);
+		    controls.target = center;
+		} else if(keyboard.pressed("enter")) {
+			for(var i = 0; i != 5; i++) {
+				addBoid();
+			}
 		}
+		
 	}
 }
 
+function boidsUpdate() {
+	var splitFlag = false;
+	if(count > 100 || (count2 < 20 && count2 != 0)) {
+		splitFlag = true;
+		count2++;
+		count = 0;
+	} else {
+		count++;
+		count2 = 0;
+	}
+	splitFlag = false;
+	
+	for(var i = 0; i != bgroup.children.length; i++) {
+		boids[i].update(boids, target, splitFlag);
+		
+		bgroup.children[i].position.x = boids[i].pos.x;
+		bgroup.children[i].position.y = boids[i].pos.y;
+		bgroup.children[i].position.z = boids[i].pos.z;
+		
+		bgroup.children[i].rotation.x = boids[i].rot.x;
+		bgroup.children[i].rotation.y = boids[i].rot.y;
+		bgroup.children[i].rotation.z = boids[i].rot.z;
+	}
+}
+
+function targetUpdate() {
+	target.position.x += targetvel.x;
+	target.position.y += targetvel.y;
+	target.position.z += targetvel.z;
+	
+	if(target.position.x > 100 || target.position.x < -100) {
+		targetvel.x = -targetvel.x;
+	}
+	if(target.position.y > 100 || target.position.y < -100) {
+		targetvel.y = -targetvel.y;
+	}
+	if(target.position.z > 100 || target.position.z < -100) {
+		targetvel.z = -targetvel.z;
+	}
+}
 
 		</script>
 		

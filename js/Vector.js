@@ -38,34 +38,22 @@ Vector.prototype.add = function(v2) {
     this.x += v2.x;
     this.y += v2.y;
     this.z += v2.z;
-}
+};
 
 Vector.prototype.sub = function(v2) {
     this.x -= v2.x;
     this.y -= v2.y;
     this.z -= v2.z;
-}
+};
 
 Vector.prototype.divScalar = function(scalar) {
     this.x /= scalar;
     this.y /= scalar;
     this.z /= scalar;
-}
+};
 
 Vector.prototype.mulScalar = function(scalar) {
     this.x *= scalar;
     this.y *= scalar;
     this.z *= scalar;
-}
-
-Vector.prototype.anglexy = function() {
-    return Math.atan2(this.x, -this.y);
-};
-
-Vector.prototype.angleyz = function() {
-    return Math.atan2(-this.y, this.z);
-};
-
-Vector.prototype.anglexz = function() {
-    return Math.atan2(this.x, this.z);
 };

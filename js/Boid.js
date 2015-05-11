@@ -1,43 +1,75 @@
 function Boid(pos, vel, rot) {
     this.pos = new Vector(pos.x, pos.y, pos.z);
     this.vel = new Vector(vel.x, vel.y, vel.z);
-    this.rot = new Vector(rot.x, rot.y, rot.z);
+    this.rot = new THREE.Euler(rot.x, rot.y, rot.z);
     this.acc = new Vector(0, 0, 0);
     
-    this.maxSpeed = .3;
-    this.cohDist = 40;
-    this.sepDist = 15;
-    this.aliDist = 60;
-    this.maxForce = 0.0001;
+    this.vfrom = new THREE.Vector3(0, 1, 0);
     
-    this.sepFac = 2;
-    this.cohFac = 1;
-    this.aliFac = 4.3;
+    this.maxSpeed = .5;
+    this.cohDist = 18;
+    this.sepDist = 10;
+    this.aliDist = 15;
+    
+    this.forceHigh = 0.03;
+    this.forceLow = 0.003;
+    this.maxForce = this.forceLow;
+    
+    this.sepFac = 1;
+    this.cohFac = .6;
+    this.aliFac = 1.6;
+    this.tarFac = .1;
 }
 
-Boid.prototype.update = function(boids) {
-    var coh = this.cohesion(boids);
+Boid.prototype.update = function(boids, target, splitFlag) {
+    var coh = this.cohesion(boids, splitFlag);
     var sep = this.separation(boids);
     var ali = this.alignment(boids);
-    coh.mulScalar(this.cohFac);
-    sep.mulScalar(this.sepFac);
-    ali.mulScalar(this.aliFac);
     
-    this.acc.add(coh);
-    this.acc.add(sep);
-    this.acc.add(ali);
+    if(!(typeof coh === 'undefined')) {
+        coh.mulScalar(this.cohFac);
+        this.acc.add(coh);
+    }
+    
+    if(!(typeof coh === 'undefined')) {
+        sep.mulScalar(this.sepFac);
+        this.acc.add(sep);
+    }
+    
+    if(!(typeof coh === 'undefined')) {
+        ali.mulScalar(this.aliFac);
+        this.acc.add(ali);
+    }
+    
+    if(!(typeof target === 'undefined')) {
+        var tar = new Vector(target.position.x, target.position.y, target.position.z);
+        tar = this.seek(tar);
+        tar.mulScalar(this.tarFac);
+        this.acc.add(tar);
+    } else {
+        var tar = new Vector(0, 0, 0);
+        tar = this.seek(tar);
+        tar.mulScalar(this.tarFac);
+        this.acc.add(tar);
+    }
+    
+    
     this.vel.add(this.acc);
+    
     
     this.vel.limit(this.maxSpeed);
     
     this.pos.add(this.vel);
     
-    this.rot.x = this.vel.angleyz();
-    this.rot.y = this.vel.anglexz();
-    this.rot.z = -this.vel.anglexy();
-}
+    var quat = new THREE.Quaternion();
+    var v = new THREE.Vector3(this.vel.x, this.vel.y, this.vel.z);
+    v.normalize();
+	quat.setFromUnitVectors(this.vfrom, v);
+	
+	this.rot.setFromQuaternion(quat);
+};
 
-Boid.prototype.cohesion = function(boids) {
+Boid.prototype.cohesion = function(boids, splitFlag) {
     var count = 0;
     var sum = new Vector(0, 0, 0);
     
@@ -51,9 +83,13 @@ Boid.prototype.cohesion = function(boids) {
     
     if(count > 0) {
         sum.divScalar(count);
-        return this.seek(sum);
+        if(splitFlag) {
+            return this.disperse(sum);
+        } else {
+            return this.seek(sum);
+        }
     }
-}
+};
 
 Boid.prototype.separation = function(boids) {
     var count = 0;
@@ -86,7 +122,7 @@ Boid.prototype.separation = function(boids) {
         sum.limit(this.maxForce);
     }
     return sum;
-}
+};
 
 Boid.prototype.alignment = function(boids) {
     var count = 0;
@@ -94,7 +130,7 @@ Boid.prototype.alignment = function(boids) {
     
     for(var i = 0; i != boids.length; i++) {
         var dist = this.pos.dist(boids[i].pos);
-        if(dist > 0.001 && dist < this.aliist) {
+        if(dist > 0.001 && dist < this.aliDist) {
             sum.add(boids[i].vel);
             count++;
         }
@@ -110,14 +146,27 @@ Boid.prototype.alignment = function(boids) {
     } else {
         return new Vector(0, 0, 0);
     }
-}
+};
 
 Boid.prototype.seek = function(target) {
     target.sub(this.pos);
     target.normalize();
     target.mulScalar(this.maxSpeed);
 
+    this.maxForce = this.forceLow;
+
     target.sub(this.vel);
     target.limit(this.maxForce);
     return target;
-}
+};
+
+Boid.prototype.disperse = function(target) {
+    target.sub(this.pos);
+    target.normalize();
+    target.mulScalar(-this.maxSpeed*100);
+    this.maxForce = this.forceHigh;
+
+    target.sub(this.vel);
+    target.limit(this.maxForce);
+    return target;
+};

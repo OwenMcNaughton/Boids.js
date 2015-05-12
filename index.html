@@ -4,9 +4,61 @@
 		<style>
 			body { margin: 0; }
 			canvas { width: 100%; height: 100% }
+			
+			#menu {
+				position: absolute;
+			 	top: 20px;
+			 	left: 5px;
+				width: 100%;
+			}
+			
+			.lab {
+				color: #ff1111;
+			}
+			
 		</style>
 	</head>
 	<body>
+		
+		<div id="menu">
+			<label class="lab">Separation Force</label>
+			<output for=SepForce id=sfout>1</output>
+			<br><input type=range min=0 max=300 value=100 id=SepForce>
+			
+			<br><label class="lab">Cohesion Force</label>
+			<output for=CohForce id=cfout>0.6</output>
+			<br><input type=range min=0 max=300 value=60 id=CohForce>  
+			
+			<br><label class="lab">Alignment Force</label>
+			<output for=AliForce id=afout>1.6</output>
+			<br><input type=range min=0 max=300 value=160 id=AliForce>
+			
+			
+			
+			<br><br><label class="lab">Separation Distance</label>
+			<output for=SepDist id=sdout>1</output>
+			<br><input type=range min=0 max=100 value=10 id=SepDist>
+			
+			<br><label class="lab">Cohesion Distance</label>
+			<output for=CohDist id=cdout>0.6</output>
+			<br><input type=range min=0 max=100 value=18 id=CohDist>  
+			
+			<br><label class="lab">Alignment Distance</label>
+			<output for=AliDist id=adout>1.6</output>
+			<br><input type=range min=0 max=100 value=15 id=AliDist>
+			
+			
+			
+			<br><br><br><label class="lab">Max Speed</label>
+			<output for=MaxSpeed id=speedout>0.5</output>
+			<br><input type=range min=0 max=200 value=50 id=MaxSpeed>
+			
+			<br><label class="lab">Acceleration</label>
+			<output for=Acceleration id=accelout>0.5</output>
+			<br><input type=range min=0 max=20 value=3 id=Acceleration>
+			
+		</div>
+
 		
 		<script src="js/three.min.js"></script>
 		<script src="js/stats.js"></script>
@@ -17,6 +69,20 @@
 		
 		<script src="js/Vector.js"></script>
 		<script src="js/Boid.js"></script>
+		
+		<script type='text/javascript' > 
+  			var sepFac = 1; 
+  			var cohFac = 0.6;
+  			var aliFac = 1.6;
+  			
+  			var sepDist = 10;
+  			var cohDist = 18;
+  			var aliDist = 15;
+  			
+  			var maxSpeed = .5;
+  			var maxForce = 0.003;
+		</script>
+		
 		<script>
 
 var camera, controls, scene, renderer, loader, stats, clock;
@@ -32,11 +98,12 @@ render();
 
 function animate() {
 	requestAnimationFrame(animate);
-	controls.update();
 	render();
 }
 
 function init() {
+	document.addEventListener('mousemove', onMouseMove, false);
+	
 	clock = new THREE.Clock();
 	
 	count = 0;
@@ -80,6 +147,7 @@ function init() {
 	document.body.appendChild(stats.domElement);
 	
 	window.addEventListener('resize', onWindowResize, false);
+	
 
 	//loadTarget();
 	loadBoids(400);
@@ -87,6 +155,15 @@ function init() {
 	addContext();
 
 	animate();
+}
+
+function onMouseMove(event) {
+	var x = event.clientX;
+	if(x < 150) {
+		controls.enabled = false;
+	} else {
+		controls.enabled = true;
+	}
 }
 
 function setupOrbitControls() {
@@ -255,12 +332,12 @@ function render() {
 	
 	renderer.render(scene, camera);
 	stats.update();
-	//controls.update();
-	
+
+	buttonUpdate();
+
 	if(goahead) {
 		boidsUpdate();
 		//targetUpdate();
-		
 		
 		if(keyboard.pressed("space")) {
 			var center = new THREE.Vector3(0, 0, 0);
@@ -270,16 +347,52 @@ function render() {
 			center.divideScalar(bgroup.children.length);
 			camera.lookAt(center);
 		    controls.target = center;
-		} else if(keyboard.pressed("enter")) {
-			for(var i = 0; i != 5; i++) {
-				addBoid();
-			}
+		} else if(keyboard.pressed("ctrl")) {
+			controls.enabled = false;
 		}
 		
 	}
 }
 
-function boidsUpdate() {
+function buttonUpdate() {
+	sepFac = (document.querySelector('#SepForce').value) / 100;
+	if(sepFac == 0) sepFac = 0.01;
+	document.querySelector('#sfout').value = sepFac;
+	
+	cohFac = (document.querySelector('#CohForce').value) / 100;
+	if(cohFac == 0) cohFac = 0.01;
+	document.querySelector('#cfout').value = cohFac;
+	
+	aliFac = (document.querySelector('#AliForce').value) / 100;
+	if(aliFac == 0) aliFac = 0.01;
+	document.querySelector('#afout').value = aliFac;
+	
+	
+	
+	sepDist = (document.querySelector('#SepDist').value) / 1;
+	if(sepFac == 0) SepDist = 0.1;
+	document.querySelector('#sdout').value = sepDist;
+	
+	cohDist = (document.querySelector('#CohDist').value) / 1;
+	if(cohFac == 0) cohDist = 0.1;
+	document.querySelector('#cdout').value = cohDist;
+	
+	aliDist = (document.querySelector('#AliDist').value) / 1;
+	if(aliDist== 0) aliDist = 0.1;
+	document.querySelector('#adout').value = aliDist;
+	
+	
+	
+	maxSpeed = (document.querySelector('#MaxSpeed').value) / 100;
+	if(maxSpeed == 0) maxSpeed = 0.01;
+	document.querySelector('#speedout').value = maxSpeed;
+	
+	maxForce = (document.querySelector('#Acceleration').value) / 1000;
+	if(maxForce == 0) maxForce = 0.001;
+	document.querySelector('#accelout').value = maxForce;
+}
+
+function boidsUpdate() {	
 	var splitFlag = false;
 	if(count > 100 || (count2 < 20 && count2 != 0)) {
 		splitFlag = true;

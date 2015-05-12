@@ -6,18 +6,10 @@ function Boid(pos, vel, rot) {
     
     this.vfrom = new THREE.Vector3(0, 1, 0);
     
-    this.maxSpeed = .5;
-    this.cohDist = 18;
-    this.sepDist = 10;
-    this.aliDist = 15;
-    
-    this.forceHigh = 0.03;
-    this.forceLow = 0.003;
-    this.maxForce = this.forceLow;
-    
-    this.sepFac = 1;
-    this.cohFac = .6;
-    this.aliFac = 1.6;
+    cohDist = 18;
+    sepDist = 10;
+    aliDist = 15;
+
     this.tarFac = .1;
 }
 
@@ -27,17 +19,17 @@ Boid.prototype.update = function(boids, target, splitFlag) {
     var ali = this.alignment(boids);
     
     if(!(typeof coh === 'undefined')) {
-        coh.mulScalar(this.cohFac);
+        coh.mulScalar(cohFac);
         this.acc.add(coh);
     }
     
     if(!(typeof coh === 'undefined')) {
-        sep.mulScalar(this.sepFac);
+        sep.mulScalar(sepFac);
         this.acc.add(sep);
     }
     
     if(!(typeof coh === 'undefined')) {
-        ali.mulScalar(this.aliFac);
+        ali.mulScalar(aliFac);
         this.acc.add(ali);
     }
     
@@ -57,7 +49,7 @@ Boid.prototype.update = function(boids, target, splitFlag) {
     this.vel.add(this.acc);
     
     
-    this.vel.limit(this.maxSpeed);
+    this.vel.limit(maxSpeed);
     
     this.pos.add(this.vel);
     
@@ -75,7 +67,7 @@ Boid.prototype.cohesion = function(boids, splitFlag) {
     
     for(var i = 0; i != boids.length; i++) {
         var dist = this.pos.dist(boids[i].pos);
-        if(dist > 0.001 && dist < this.cohDist) {
+        if(dist > 0.001 && dist < cohDist) {
             sum.add(boids[i].pos);
             count++;
         }
@@ -97,7 +89,7 @@ Boid.prototype.separation = function(boids) {
     
     for(var i = 0; i != boids.length; i++) {
         var dist = this.pos.dist(boids[i].pos);
-        if(dist > 0.001 && dist < this.sepDist) {
+        if(dist > 0.001 && dist < sepDist) {
             var diff = new Vector(this.pos.x, this.pos.y, this.pos.z);
             diff.sub(boids[i].pos);
             diff.normalize();
@@ -117,9 +109,9 @@ Boid.prototype.separation = function(boids) {
     
     if(sum.mag() > 0) {
         sum.normalize();
-        sum.mulScalar(this.maxSpeed);
+        sum.mulScalar(maxSpeed);
         sum.sub(this.vel);
-        sum.limit(this.maxForce);
+        sum.limit(maxForce);
     }
     return sum;
 };
@@ -130,7 +122,7 @@ Boid.prototype.alignment = function(boids) {
     
     for(var i = 0; i != boids.length; i++) {
         var dist = this.pos.dist(boids[i].pos);
-        if(dist > 0.001 && dist < this.aliDist) {
+        if(dist > 0.001 && dist < aliDist) {
             sum.add(boids[i].vel);
             count++;
         }
@@ -139,9 +131,9 @@ Boid.prototype.alignment = function(boids) {
     if(count > 0) {
         sum.divScalar(count);
         sum.normalize();
-        sum.mulScalar(this.maxSpeed);
+        sum.mulScalar(maxSpeed);
         sum.sub(this.vel);
-        sum.limit(this.maxForce);
+        sum.limit(maxForce);
         return sum;
     } else {
         return new Vector(0, 0, 0);
@@ -151,22 +143,20 @@ Boid.prototype.alignment = function(boids) {
 Boid.prototype.seek = function(target) {
     target.sub(this.pos);
     target.normalize();
-    target.mulScalar(this.maxSpeed);
-
-    this.maxForce = this.forceLow;
+    target.mulScalar(maxSpeed);
 
     target.sub(this.vel);
-    target.limit(this.maxForce);
+    target.limit(maxForce);
     return target;
 };
 
 Boid.prototype.disperse = function(target) {
     target.sub(this.pos);
     target.normalize();
-    target.mulScalar(-this.maxSpeed*100);
-    this.maxForce = this.forceHigh;
+    target.mulScalar(-maxSpeed*100);
+    maxForce = this.forceHigh;
 
     target.sub(this.vel);
-    target.limit(this.maxForce);
+    target.limit(maxForce);
     return target;
 };

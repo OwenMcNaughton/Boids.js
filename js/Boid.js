@@ -17,20 +17,20 @@ function Boid(pos, vel, rot, shk) {
 Boid.prototype.update = function(boids, target, sharks) {
     this.sharkFlag = false;
     
-    var coh = this.cohesion(boids);
     var sep = this.separation(boids);
     var ali = this.alignment(boids);
     var sharkSep = this.sharkSeparation(sharks);
+    var coh = this.cohesion(boids);
     
     if(this.shark) {
         if(!(typeof coh === 'undefined')) {
-            coh.mulScalar(3);
+            coh.mulScalar(5);
         }
         if(!(typeof sep === 'undefined')) {
             sep.mulScalar(0.01);
         }
         if(!(typeof ali === 'undefined')) {
-            ali.mulScalar(1);
+            ali.mulScalar(0);
         }
     } else {
         if(this.sharkFlag) {
@@ -76,9 +76,13 @@ Boid.prototype.update = function(boids, target, sharks) {
     }
     
     if(!(typeof target === 'undefined')) {
-        var tar = new Vector(target.position.x, target.position.y, target.position.z);
+        var tar = new Vector(target.x, target.y, target.z);
         tar = this.seek(tar);
-        tar.mulScalar(tarFac);
+        if(this.shark) {
+            tar.mulScalar(tarFac*20);
+        } else {
+            tar.mulScalar(tarFac);
+        }
         this.acc.add(tar);
     } else {
         var tar = new Vector(0, 0, 0);
@@ -87,13 +91,16 @@ Boid.prototype.update = function(boids, target, sharks) {
         this.acc.add(tar);
     }
     
-    
     this.vel.add(this.acc);
     
-    if(this.sharkFlag) {
-        this.vel.limit(maxSpeed*10);
+    if(this.shark) {
+        this.vel.limit(maxSpeed*1.5);
     } else {
-        this.vel.limit(maxSpeed);
+        if(this.sharkFlag) {
+            this.vel.limit(sharkMaxSpeed);
+        } else {
+            this.vel.limit(maxSpeed);
+        }
     }
     
     this.pos.add(this.vel);
@@ -113,7 +120,7 @@ Boid.prototype.cohesion = function(boids) {
     for(var i = 0; i != boids.length; i++) {
         var dist = this.pos.dist(boids[i].pos);
         if(this.shark) {
-            if(dist > 0.001 && dist < cohDist*2) {
+            if(dist > 0.001 && dist < cohDist*3) {
                 sum.add(boids[i].pos);
                 count++;
             }
@@ -127,7 +134,11 @@ Boid.prototype.cohesion = function(boids) {
     
     if(count > 0) {
         sum.divScalar(count);
-        return this.seek(sum);
+        if(this.sharkFlag) {
+            return this.disperse(sum);
+        } else {
+            return this.seek(sum);
+        }
     } else {
         return new Vector(0, 0, 0);
     }
@@ -193,9 +204,9 @@ Boid.prototype.sharkSeparation = function(sharks) {
     
     if(sum.mag() > 0) {
         sum.normalize();
-        sum.mulScalar(maxSpeed);
+        sum.mulScalar(sharkMaxSpeed);
         sum.sub(this.vel);
-        sum.limit(maxForce);
+        sum.limit(sharkMaxForce);
     }
     return sum;
 }
@@ -248,9 +259,8 @@ Boid.prototype.disperse = function(target) {
     target.sub(this.pos);
     target.normalize();
     target.mulScalar(-maxSpeed*100);
-    maxForce = this.forceHigh;
 
     target.sub(this.vel);
-    target.limit(maxForce);
+    target.limit(maxForce*10);
     return target;
 };

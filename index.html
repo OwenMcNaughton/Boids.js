@@ -19,7 +19,6 @@
 		</style>
 	</head>
 	<body>
-		
 		<div id="menu">
 			<label class="lab">Separation Force</label>
 			<output for=SepForce id=sfout>1</output>
@@ -61,8 +60,25 @@
 			<output for=Acceleration id=accelout>0.5</output>
 			<br><input type=range min=0 max=20 value=3 id=Acceleration>
 			
+			<br><input onclick="changeShark()" type="checkbox" 
+						id=folShark>Follow a Shark</input>
+			<br><input onclick="changeBoid()"
+						type="checkbox" id=folBoid>Follow a Boid</input>
+			
 		</div>
-
+		
+		<script type='text/javascript'>
+			var trackingShark = false;
+			var trackingBoid = false;
+			
+			function changeShark() { 
+	    		trackingShark = !trackingShark;
+			}	
+			
+			function changeBoid() { 
+    			trackingBoid = !trackingBoid;
+			}	
+		</script>
 		
 		<script src="js/three.min.js"></script>
 		<script src="js/stats.js"></script>
@@ -70,6 +86,8 @@
 		<script src="js/Detector.js"></script>
 		<script src="js/FirstPersonControls.js"></script>
 		<script src="js/KeyboardState.js"></script>
+		<script src="js/Projector.js"></script>
+		<script src="js/THREEx.FullScreen.js"></script>
 		
 		<script src="js/Vector.js"></script>
 		<script src="js/Boid.js"></script>
@@ -80,7 +98,7 @@
   			var aliFac = 1.6;
   			var tarFac = 0.1;
   			
-  			var sharkSepFac = 3;
+  			var sharkSepFac = 5;
   			var sharkCohFac = 0.01;
   			var sharkAliFac = 0.01;
   			
@@ -93,8 +111,6 @@
   			var sharkMaxSpeed = maxSpeed * 5;
   			var maxForce = 0.003;
   			var sharkMaxForce = maxForce * 5;
-  			var sharkAcceleration = maxForce / 2;
-  			var sharkSpeed = maxSpeed / 2;
 		</script>
 		
 		<script>
@@ -116,7 +132,12 @@ function animate() {
 }
 
 function init() {
+	THREEx.FullScreen.bindKey({ charCode : 'm'.charCodeAt(0) });
 	document.addEventListener('mousemove', onMouseMove, false);
+	
+	trackingShark = false;
+	trackingBoid = false;
+	mouse = new THREE.Vector2();
 	
 	clock = new THREE.Clock();
 	
@@ -125,7 +146,7 @@ function init() {
 	camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
 	camera.position.z = 100;
 
-	setupOrbitControls();
+	//setupOrbitControls();
 
 	scene = new THREE.Scene();
 	scene.fog = new THREE.FogExp2(0xcccccc, 0.0027);
@@ -156,14 +177,14 @@ function init() {
 
 	stats = new Stats();
 	stats.domElement.style.position = 'absolute';
-	stats.domElement.style.left = '0px';
+	stats.domElement.style.right = '0px';
 	stats.domElement.style.bottom = '0px';
 	document.body.appendChild(stats.domElement);
 	
 	window.addEventListener('resize', onWindowResize, false);
 	
-
 	//loadTarget();
+	target = new Vector(0, 0, 0);
 	loadBoids(400);
 	
 	addContext();
@@ -179,7 +200,7 @@ function onMouseMove(event) {
 		controls.enabled = true;
 	}
 }
-
+  
 function setupOrbitControls() {
 	controls = new THREE.OrbitControls(camera);
 	controls.damping = 0.2;
@@ -264,7 +285,7 @@ function loadBoids(amount) {
 	sgroup = new THREE.Group();
 	loader = new THREE.JSONLoader();
 	
-	loader.load('models/eagle.json', function (geometry) {
+	loader.load('models/shark.json', function (geometry) {
 		THREE.GeometryUtils.center(geometry);
 		sharkGeometry = geometry;
 	});
@@ -293,7 +314,7 @@ function loadBoids(amount) {
 			var boid;
 			var mesh;
 			var r = (Math.random() * 100) - 1;
-			if(i < amount/100) {
+			if(i < 3) {
 				boid = new Boid(pos, rot, vel, true);
 				mesh = new THREE.Mesh(sharkGeometry, sharkMaterial);
 			} else {
@@ -309,7 +330,7 @@ function loadBoids(amount) {
 			mesh.rotation.y = rot.y;
 			mesh.rotation.z = rot.z;
 			
-			if(i < amount/100) {
+			if(i < 3) {
 				sharks.push(boid);
 				sgroup.add(mesh);
 			} else {
@@ -387,14 +408,34 @@ function render() {
 		} else if(keyboard.pressed("ctrl")) {
 			controls.enabled = false;
 		}
-		
 	}
+	
+	if(trackingShark) {
+		var relativeCameraOffset = new THREE.Vector3(0, -20, 0);
+		var cameraOffset = relativeCameraOffset.applyMatrix4(sgroup.children[0].matrixWorld);
+		camera.position.x = cameraOffset.x;
+		camera.position.y = cameraOffset.y;
+		camera.position.z = cameraOffset.z;
+		camera.lookAt(sgroup.children[0].position);
+	}
+	
+	if(trackingBoid) {
+		var relativeCameraOffset = new THREE.Vector3(0, -20, 0);
+		var cameraOffset = relativeCameraOffset.applyMatrix4(bgroup.children[0].matrixWorld);
+		camera.position.x = cameraOffset.x;
+		camera.position.y = cameraOffset.y;
+		camera.position.z = cameraOffset.z;
+		camera.lookAt(bgroup.children[0].position);
+	}
+	
+	
 }
 
 function buttonUpdate() {
 	sepFac = (document.querySelector('#SepForce').value) / 100;
 	if(sepFac == 0) sepFac = 0.01;
 	document.querySelector('#sfout').value = sepFac;
+	sharkSepFac = sepFac * 5;
 	
 	cohFac = (document.querySelector('#CohForce').value) / 100;
 	if(cohFac == 0) cohFac = 0.01;
@@ -407,8 +448,8 @@ function buttonUpdate() {
 	tarFac = (document.querySelector('#CenForce').value) / 100;
 	if(tarFac == 0) tarFac = 0.001;
 	document.querySelector('#tfout').value = tarFac;
-	
-	
+
+
 	
 	sepDist = (document.querySelector('#SepDist').value) / 1;
 	if(sepFac == 0) SepDist = 0.1;
@@ -427,14 +468,13 @@ function buttonUpdate() {
 	
 	maxSpeed = (document.querySelector('#MaxSpeed').value) / 100;
 	if(maxSpeed == 0) maxSpeed = 0.01;
+	sharkMaxSpeed = maxSpeed * 3;
 	document.querySelector('#speedout').value = maxSpeed;
 	
 	maxForce = (document.querySelector('#Acceleration').value) / 1000;
 	if(maxForce == 0) maxForce = 0.001;
+	sharkMaxForce = maxForce * 3;
 	document.querySelector('#accelout').value = maxForce;
-	
-	sharkAcceleration = maxForce / 2;
-  	sharkSpeed = maxSpeed / 2;
 }
 
 function boidsUpdate() {	

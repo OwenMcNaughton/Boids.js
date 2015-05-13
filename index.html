@@ -33,6 +33,10 @@
 			<output for=AliForce id=afout>1.6</output>
 			<br><input type=range min=0 max=300 value=160 id=AliForce>
 			
+			<br><br><label class="lab">Centre Force</label>
+			<output for=CenForce id=tfout>0.1</output>
+			<br><input type=range min=0 max=100 value=10 id=CenForce>
+			
 			
 			
 			<br><br><label class="lab">Separation Distance</label>
@@ -74,22 +78,32 @@
   			var sepFac = 1; 
   			var cohFac = 0.6;
   			var aliFac = 1.6;
+  			var tarFac = 0.1;
+  			
+  			var sharkSepFac = 3;
+  			var sharkCohFac = 0.01;
+  			var sharkAliFac = 0.01;
   			
   			var sepDist = 10;
+  			var sharkSepDist = sepDist * 2;
   			var cohDist = 18;
   			var aliDist = 15;
   			
   			var maxSpeed = .5;
+  			var sharkMaxSpeed = maxSpeed * 5;
   			var maxForce = 0.003;
+  			var sharkMaxForce = maxForce * 5;
+  			var sharkAcceleration = maxForce / 2;
+  			var sharkSpeed = maxSpeed / 2;
 		</script>
 		
 		<script>
 
 var camera, controls, scene, renderer, loader, stats, clock;
 
-var boids, bgroup, target, targetvel, goahead, count, count2, keyboard;
+var boids, sharks, bgroup, sgroup, target, targetvel, goahead, keyboard;
 
-var boidGeometry, boidMaterial;
+var boidGeometry, boidMaterial, sharkGeometry, sharkMaterial;
 
 goahead = false;
 
@@ -245,15 +259,23 @@ function loadTarget() {
 
 function loadBoids(amount) {
 	boids = [];
+	sharks = [];
 	bgroup = new THREE.Group();
+	sgroup = new THREE.Group();
 	loader = new THREE.JSONLoader();
+	
+	loader.load('models/eagle.json', function (geometry) {
+		THREE.GeometryUtils.center(geometry);
+		sharkGeometry = geometry;
+	});
+	
 	loader.load('models/vector.json', function (geometry) {
 		THREE.GeometryUtils.center(geometry);
 		boidGeometry = geometry;
+		sharkMaterial = new THREE.MeshLambertMaterial({color: 0x4444cc});
 		boidMaterial = new THREE.MeshLambertMaterial({color: 0xcc4444});
 		
 		for(var i = 0; i != amount; i++) {
-			mesh = new THREE.Mesh(geometry, boidMaterial);
 			var posx = Math.random() * 300 - 150;
 			var posy = Math.random() * 300 - 150;
 			var posz = Math.random() * 300 - 150;
@@ -267,6 +289,17 @@ function loadBoids(amount) {
 			var vel = new Vector(Math.random() * 10 - .5,
 							     Math.random() * 10 - .5,
 							     Math.random() * 10 - .5);
+							     
+			var boid;
+			var mesh;
+			var r = (Math.random() * 100) - 1;
+			if(i < amount/100) {
+				boid = new Boid(pos, rot, vel, true);
+				mesh = new THREE.Mesh(sharkGeometry, sharkMaterial);
+			} else {
+				boid = new Boid(pos, rot, vel, false);
+				mesh = new THREE.Mesh(geometry, boidMaterial);
+			}
 			
 			mesh.position.x = pos.x;
 			mesh.position.y = pos.y;
@@ -276,10 +309,13 @@ function loadBoids(amount) {
 			mesh.rotation.y = rot.y;
 			mesh.rotation.z = rot.z;
 			
-			var boid = new Boid(pos, rot, vel);
-			
-			boids.push(boid);
-			bgroup.add(mesh);
+			if(i < amount/100) {
+				sharks.push(boid);
+				sgroup.add(mesh);
+			} else {
+				boids.push(boid);
+				bgroup.add(mesh);
+			}
 			
 			if(i == amount-1) {
 				goahead = true;
@@ -287,6 +323,7 @@ function loadBoids(amount) {
 		}
 	});
 	
+	scene.add(sgroup);
 	scene.add(bgroup);
 }
 
@@ -367,11 +404,16 @@ function buttonUpdate() {
 	if(aliFac == 0) aliFac = 0.01;
 	document.querySelector('#afout').value = aliFac;
 	
+	tarFac = (document.querySelector('#CenForce').value) / 100;
+	if(tarFac == 0) tarFac = 0.001;
+	document.querySelector('#tfout').value = tarFac;
+	
 	
 	
 	sepDist = (document.querySelector('#SepDist').value) / 1;
 	if(sepFac == 0) SepDist = 0.1;
 	document.querySelector('#sdout').value = sepDist;
+	sharkSepDist = sepDist * 2;
 	
 	cohDist = (document.querySelector('#CohDist').value) / 1;
 	if(cohFac == 0) cohDist = 0.1;
@@ -390,22 +432,14 @@ function buttonUpdate() {
 	maxForce = (document.querySelector('#Acceleration').value) / 1000;
 	if(maxForce == 0) maxForce = 0.001;
 	document.querySelector('#accelout').value = maxForce;
+	
+	sharkAcceleration = maxForce / 2;
+  	sharkSpeed = maxSpeed / 2;
 }
 
 function boidsUpdate() {	
-	var splitFlag = false;
-	if(count > 100 || (count2 < 20 && count2 != 0)) {
-		splitFlag = true;
-		count2++;
-		count = 0;
-	} else {
-		count++;
-		count2 = 0;
-	}
-	splitFlag = false;
-	
 	for(var i = 0; i != bgroup.children.length; i++) {
-		boids[i].update(boids, target, splitFlag);
+		boids[i].update(boids, target, sharks);
 		
 		bgroup.children[i].position.x = boids[i].pos.x;
 		bgroup.children[i].position.y = boids[i].pos.y;
@@ -414,6 +448,18 @@ function boidsUpdate() {
 		bgroup.children[i].rotation.x = boids[i].rot.x;
 		bgroup.children[i].rotation.y = boids[i].rot.y;
 		bgroup.children[i].rotation.z = boids[i].rot.z;
+	}
+	
+	for(var i = 0; i != sgroup.children.length; i++) {
+		sharks[i].update(boids, target, sharks);
+		
+		sgroup.children[i].position.x = sharks[i].pos.x;
+		sgroup.children[i].position.y = sharks[i].pos.y;
+		sgroup.children[i].position.z = sharks[i].pos.z;
+		
+		sgroup.children[i].rotation.x = sharks[i].rot.x;
+		sgroup.children[i].rotation.y = sharks[i].rot.y;
+		sgroup.children[i].rotation.z = sharks[i].rot.z;
 	}
 }
 

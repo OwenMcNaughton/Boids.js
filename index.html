@@ -26,7 +26,7 @@
 		</style>
 	</head>
 	<body>
-		<div id="menu">
+		<div id="menu" onmouseenter="disableOrbit()" onmouseleave="enableOrbit()">
 			<label class="lab">Separation Force</label>
 			<output for=SepForce id=sfout>1</output>
 			<br><input type=range min=0 max=300 value=100 id=SepForce>
@@ -57,7 +57,7 @@
 			
 		</div>
 		
-		<div id="menu2">
+		<div id="menu2" onmouseenter="disableOrbit()" onmouseleave="enableOrbit()">
 			<label class="lab">Separation Distance</label>
 			<output for=SepDist id=sdout>1</output>
 			<br><input type=range min=0 max=100 value=10 id=SepDist>
@@ -189,11 +189,18 @@ function sharkMouseUp() {
 	}
 }
 
+function disableOrbit() {
+	controls.enabled = false;
+}
+
+function enableOrbit() {
+	controls.enabled = true;
+}
+
 function init() {
 	fixLayout();
 	
 	THREEx.FullScreen.bindKey({ charCode : 'm'.charCodeAt(0) });
-	document.addEventListener('mousemove', onMouseMove, false);
 	
 	trackingShark = false;
 	trackingBoid = false;
@@ -258,15 +265,6 @@ function fixLayout() {
 	div.style.left = '' + width + 'px';
 }
 
-function onMouseMove(event) {
-	var x = event.clientX;
-	if(x < 150) {
-		controls.enabled = false;
-	} else {
-		controls.enabled = true;
-	}
-}
-  
 function setupOrbitControls() {
 	controls = new THREE.OrbitControls(camera);
 	controls.damping = 0.2;

@@ -7,13 +7,20 @@
 			
 			#menu {
 				position: absolute;
-			 	top: 20px;
+			 	top: 10px;
 			 	left: 5px;
-				width: 100%;
+				width: 200px;
 			}
 			
 			.lab {
 				color: #ff1111;
+			}
+			
+			#menu2 {
+				position: absolute;
+				top: 10px;
+				left: 155px;
+				width: 200px;
 			}
 			
 		</style>
@@ -26,33 +33,21 @@
 			
 			<br><label class="lab">Cohesion Force</label>
 			<output for=CohForce id=cfout>0.6</output>
-			<br><input type=range min=0 max=300 value=60 id=CohForce>  
+			<br><input type=range min=0 max=300 value=80 id=CohForce>  
 			
 			<br><label class="lab">Alignment Force</label>
 			<output for=AliForce id=afout>1.6</output>
 			<br><input type=range min=0 max=300 value=160 id=AliForce>
 			
+			
+			
 			<br><br><label class="lab">Centre Force</label>
 			<output for=CenForce id=tfout>0.1</output>
-			<br><input type=range min=0 max=100 value=10 id=CenForce>
+			<br><input type=range min=0 max=100 value=35 id=CenForce>
 			
 			
 			
-			<br><br><label class="lab">Separation Distance</label>
-			<output for=SepDist id=sdout>1</output>
-			<br><input type=range min=0 max=100 value=10 id=SepDist>
-			
-			<br><label class="lab">Cohesion Distance</label>
-			<output for=CohDist id=cdout>0.6</output>
-			<br><input type=range min=0 max=100 value=18 id=CohDist>  
-			
-			<br><label class="lab">Alignment Distance</label>
-			<output for=AliDist id=adout>1.6</output>
-			<br><input type=range min=0 max=100 value=15 id=AliDist>
-			
-			
-			
-			<br><br><br><label class="lab">Max Speed</label>
+			<br><br><label class="lab">Max Speed</label>
 			<output for=MaxSpeed id=speedout>0.5</output>
 			<br><input type=range min=0 max=200 value=50 id=MaxSpeed>
 			
@@ -60,11 +55,37 @@
 			<output for=Acceleration id=accelout>0.5</output>
 			<br><input type=range min=0 max=20 value=3 id=Acceleration>
 			
-			<br><input onclick="changeShark()" type="checkbox" 
+		</div>
+		
+		<div id="menu2">
+			<label class="lab">Separation Distance</label>
+			<output for=SepDist id=sdout>1</output>
+			<br><input type=range min=0 max=100 value=10 id=SepDist>
+			
+			<br><label class="lab">Cohesion Distance</label>
+			<output for=CohDist id=cdout>0.6</output>
+			<br><input type=range min=0 max=100 value=25 id=CohDist>  
+			
+			<br><label class="lab">Alignment Distance</label>
+			<output for=AliDist id=adout>1.6</output>
+			<br><input type=range min=0 max=100 value=15 id=AliDist>
+			
+			
+			
+			<br><br><label class="lab">Boid Count</label>
+			<output for=BoidCount id=BoidCountLabel>200</output>
+			<br><input type=range min=0 max=1000 value=200 id=BoidCount onmouseup="boidMouseUp()">
+			
+			<br><label class="lab">Shark Count</label>
+			<output for=SharkCount id=SharkCountLabel>2</output>
+			<br><input type=range min=0 max=20 value=2 id=SharkCount onmouseup="sharkMouseUp()">
+			
+			
+			
+			<br><br><input onclick="changeShark()" type="checkbox" 
 						id=folShark>Follow a Shark</input>
 			<br><input onclick="changeBoid()"
 						type="checkbox" id=folBoid>Follow a Boid</input>
-			
 		</div>
 		
 		<script type='text/javascript'>
@@ -77,7 +98,7 @@
 			
 			function changeBoid() { 
     			trackingBoid = !trackingBoid;
-			}	
+			}
 		</script>
 		
 		<script src="js/three.min.js"></script>
@@ -94,9 +115,9 @@
 		
 		<script type='text/javascript' > 
   			var sepFac = 1; 
-  			var cohFac = 0.6;
+  			var cohFac = 0.7;
   			var aliFac = 1.6;
-  			var tarFac = 0.1;
+  			var tarFac = 0.3;
   			
   			var sharkSepFac = 5;
   			var sharkCohFac = 0.01;
@@ -104,13 +125,16 @@
   			
   			var sepDist = 10;
   			var sharkSepDist = sepDist * 2;
-  			var cohDist = 18;
+  			var cohDist = 25;
   			var aliDist = 15;
   			
   			var maxSpeed = .5;
-  			var sharkMaxSpeed = maxSpeed * 5;
+  			var sharkMaxSpeed = maxSpeed * 3;
   			var maxForce = 0.003;
-  			var sharkMaxForce = maxForce * 5;
+  			var sharkMaxForce = maxForce * 3;
+  			
+  			var boidCount = 200, sharkCount = 2;
+  			
 		</script>
 		
 		<script>
@@ -131,7 +155,43 @@ function animate() {
 	render();
 }
 
+function boidMouseUp() {
+	boidCount = (document.querySelector('#BoidCount').value);
+	document.querySelector('#BoidCountLabel').value = boidCount;
+	
+	if(boidCount > boids.length) {
+		var count = boidCount - boids.length;
+		for(var i = 0; i != count; i++) {
+			addBoid();
+		}
+	} else if(boidCount < boids.length) {
+		var count = boids.length - boidCount;
+		for(var i = 0; i != count; i++) {
+			removeBoid();
+		}
+	}
+}
+
+function sharkMouseUp() {
+	sharkCount = (document.querySelector('#SharkCount').value);
+	document.querySelector('#SharkCountLabel').value = sharkCount;
+	
+	if(sharkCount > sharks.length) {
+		var count = sharkCount - sharks.length;
+		for(var i = 0; i != count; i++) {
+			addShark();
+		}
+	} else if(sharkCount < sharks.length) {
+		var count = sharks.length - sharkCount;
+		for(var i = 0; i != count; i++) {
+			removeShark();
+		}
+	}
+}
+
 function init() {
+	fixLayout();
+	
 	THREEx.FullScreen.bindKey({ charCode : 'm'.charCodeAt(0) });
 	document.addEventListener('mousemove', onMouseMove, false);
 	
@@ -146,7 +206,7 @@ function init() {
 	camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
 	camera.position.z = 100;
 
-	setupOrbitControls();
+	//setupOrbitControls();
 
 	scene = new THREE.Scene();
 	scene.fog = new THREE.FogExp2(0xcccccc, 0.0027);
@@ -183,13 +243,19 @@ function init() {
 	
 	window.addEventListener('resize', onWindowResize, false);
 	
-	//loadTarget();
 	target = new Vector(0, 0, 0);
-	loadBoids(400);
+	loadBoids1();
 	
 	addContext();
 
 	animate();
+}
+
+function fixLayout() {
+	var div = document.getElementById('menu2');
+	var slider = document.getElementById('SepForce');
+	var width = slider.offsetWidth + 20;
+	div.style.left = '' + width + 'px';
 }
 
 function onMouseMove(event) {
@@ -257,46 +323,20 @@ function geo2line( geo ) // credit to WestLangley!
     return geometry;
 }
 
-function loadTarget() {
-	loader = new THREE.JSONLoader();
-	loader.load('models/ball.json', function (geometry) {
-		THREE.GeometryUtils.center(geometry);
-		var material = new THREE.MeshLambertMaterial({color: 0x44cc44});
-		
-	 	target = new THREE.Mesh(geometry, material);
-		target.scale.set(3, 3, 3);
-		
-		target.position.x = Math.random() * 200 - 100;
-		target.position.y = Math.random() * 200 - 100;
-		target.position.z = Math.random() * 200 - 100;
-		
-		targetvel = new Vector(Math.random() * .4 - .2,
-							   Math.random() * .4 - .2,
-							   Math.random() * .4 - .2);
-							   
-		scene.add(target);
-	});
-}
-
-function loadBoids(amount) {
+function loadBoids1(amount) {
 	boids = [];
 	sharks = [];
 	bgroup = new THREE.Group();
 	sgroup = new THREE.Group();
 	loader = new THREE.JSONLoader();
+	loader2 = new THREE.JSONLoader();
 	
 	loader.load('models/shark.json', function (geometry) {
 		THREE.GeometryUtils.center(geometry);
 		sharkGeometry = geometry;
-	});
-	
-	loader.load('models/vector.json', function (geometry) {
-		THREE.GeometryUtils.center(geometry);
-		boidGeometry = geometry;
 		sharkMaterial = new THREE.MeshLambertMaterial({color: 0x4444cc});
-		boidMaterial = new THREE.MeshLambertMaterial({color: 0xcc4444});
 		
-		for(var i = 0; i != amount; i++) {
+		for(var i = 0; i != sharkCount; i++) {
 			var posx = Math.random() * 300 - 150;
 			var posy = Math.random() * 300 - 150;
 			var posz = Math.random() * 300 - 150;
@@ -311,16 +351,48 @@ function loadBoids(amount) {
 							     Math.random() * 10 - .5,
 							     Math.random() * 10 - .5);
 							     
-			var boid;
-			var mesh;
-			var r = (Math.random() * 100) - 1;
-			if(i < 3) {
-				boid = new Boid(pos, rot, vel, true);
-				mesh = new THREE.Mesh(sharkGeometry, sharkMaterial);
-			} else {
-				boid = new Boid(pos, rot, vel, false);
-				mesh = new THREE.Mesh(geometry, boidMaterial);
-			}
+			var boid = new Boid(pos, rot, vel, true);
+			var	mesh = new THREE.Mesh(sharkGeometry, sharkMaterial);
+
+			mesh.position.x = pos.x;
+			mesh.position.y = pos.y;
+			mesh.position.z = pos.z;
+			
+			mesh.rotation.x = rot.x;
+			mesh.rotation.y = rot.y;
+			mesh.rotation.z = rot.z;
+
+			sharks.push(boid);
+			sgroup.add(mesh);
+		}
+		loadBoids2();
+	});
+}
+
+function loadBoids2() {
+	loader2.load('models/vector.json', function (geometry) {
+		THREE.GeometryUtils.center(geometry);
+		boidGeometry = geometry;
+		boidMaterial = new THREE.MeshLambertMaterial({color: 0xcc4444});
+		
+		for(var i = 0; i != boidCount; i++) {
+			var posx = Math.random() * 300 - 150;
+			var posy = Math.random() * 300 - 150;
+			var posz = Math.random() * 300 - 150;
+			
+			var rotx = 0;
+			var roty = 0;
+			var rotz = 0;
+			
+			var pos = new Vector(posx, posy, posz);
+			var rot = new Vector(rotx, roty, rotz);
+			var vel = new Vector(Math.random() * 10 - .5,
+							     Math.random() * 10 - .5,
+							     Math.random() * 10 - .5);
+							     
+
+			var	boid = new Boid(pos, rot, vel, false);
+			var	mesh = new THREE.Mesh(geometry, boidMaterial);
 			
 			mesh.position.x = pos.x;
 			mesh.position.y = pos.y;
@@ -329,21 +401,16 @@ function loadBoids(amount) {
 			mesh.rotation.x = rot.x;
 			mesh.rotation.y = rot.y;
 			mesh.rotation.z = rot.z;
-			
-			if(i < 3) {
-				sharks.push(boid);
-				sgroup.add(mesh);
-			} else {
-				boids.push(boid);
-				bgroup.add(mesh);
-			}
-			
-			if(i == amount-1) {
-				goahead = true;
-			}
+
+			boids.push(boid);
+			bgroup.add(mesh);
 		}
+		goahead = true;
+		loadBoids3();
 	});
-	
+}
+
+function loadBoids3() {
 	scene.add(sgroup);
 	scene.add(bgroup);
 }
@@ -376,7 +443,46 @@ function addBoid() {
 	
 	boids.push(boid);
 	bgroup.add(mesh);
-	scene.add(bgroup);
+}
+
+function addShark() {
+	var mesh = new THREE.Mesh(sharkGeometry, sharkMaterial);
+	var posx = Math.random() * 100 - 50;
+	var posy = Math.random() * 100 - 50;
+	var posz = Math.random() * 100 - 50;
+	
+	var rotx = 0;
+	var roty = 0;
+	var rotz = 0;
+	
+	var pos = new Vector(posx, posy, posz);
+	var rot = new Vector(rotx, roty, rotz);
+	var vel = new Vector(Math.random() * 10 - .5,
+					     Math.random() * 10 - .5,
+					     Math.random() * 10 - .5);
+	
+	mesh.position.x = pos.x;
+	mesh.position.y = pos.y;
+	mesh.position.z = pos.z;
+	
+	mesh.rotation.x = rot.x;
+	mesh.rotation.y = rot.y;
+	mesh.rotation.z = rot.z;
+	
+	var boid = new Boid(pos, rot, vel);
+	
+	sharks.push(boid);
+	sgroup.add(mesh);
+}
+
+function removeShark() {
+	sharks.pop();
+	sgroup.children.pop();
+}
+
+function removeBoid() {
+	boids.pop();
+	bgroup.children.pop();
 }
 
 function onWindowResize() {
@@ -395,7 +501,6 @@ function render() {
 
 	if(goahead) {
 		boidsUpdate();
-		//targetUpdate();
 		
 		if(keyboard.pressed("space")) {
 			var center = new THREE.Vector3(0, 0, 0);
@@ -405,8 +510,6 @@ function render() {
 			center.divideScalar(bgroup.children.length);
 			camera.lookAt(center);
 		    controls.target = center;
-		} else if(keyboard.pressed("ctrl")) {
-			controls.enabled = false;
 		}
 	}
 	
@@ -478,47 +581,34 @@ function buttonUpdate() {
 }
 
 function boidsUpdate() {	
-	for(var i = 0; i != bgroup.children.length; i++) {
-		boids[i].update(boids, target, sharks);
-		
-		bgroup.children[i].position.x = boids[i].pos.x;
-		bgroup.children[i].position.y = boids[i].pos.y;
-		bgroup.children[i].position.z = boids[i].pos.z;
-		
-		bgroup.children[i].rotation.x = boids[i].rot.x;
-		bgroup.children[i].rotation.y = boids[i].rot.y;
-		bgroup.children[i].rotation.z = boids[i].rot.z;
+	for(var i = 0; i != boidCount; i++) {
+		if(i < boids.length) {
+			boids[i].update(boids, target, sharks);
+			
+			bgroup.children[i].position.x = boids[i].pos.x;
+			bgroup.children[i].position.y = boids[i].pos.y;
+			bgroup.children[i].position.z = boids[i].pos.z;
+			
+			bgroup.children[i].rotation.x = boids[i].rot.x;
+			bgroup.children[i].rotation.y = boids[i].rot.y;
+			bgroup.children[i].rotation.z = boids[i].rot.z;
+		}
 	}
 	
-	for(var i = 0; i != sgroup.children.length; i++) {
-		sharks[i].update(boids, target, sharks);
-		
-		sgroup.children[i].position.x = sharks[i].pos.x;
-		sgroup.children[i].position.y = sharks[i].pos.y;
-		sgroup.children[i].position.z = sharks[i].pos.z;
-		
-		sgroup.children[i].rotation.x = sharks[i].rot.x;
-		sgroup.children[i].rotation.y = sharks[i].rot.y;
-		sgroup.children[i].rotation.z = sharks[i].rot.z;
+	for(var i = 0; i != sharkCount; i++) {
+		if(i < sharks.length) {
+			sharks[i].update(boids, target, sharks);
+			
+			sgroup.children[i].position.x = sharks[i].pos.x;
+			sgroup.children[i].position.y = sharks[i].pos.y;
+			sgroup.children[i].position.z = sharks[i].pos.z;
+			
+			sgroup.children[i].rotation.x = sharks[i].rot.x;
+			sgroup.children[i].rotation.y = sharks[i].rot.y;
+			sgroup.children[i].rotation.z = sharks[i].rot.z;
+		}
 	}
 }
-
-function targetUpdate() {
-	target.position.x += targetvel.x;
-	target.position.y += targetvel.y;
-	target.position.z += targetvel.z;
-	
-	if(target.position.x > 100 || target.position.x < -100) {
-		targetvel.x = -targetvel.x;
-	}
-	if(target.position.y > 100 || target.position.y < -100) {
-		targetvel.y = -targetvel.y;
-	}
-	if(target.position.z > 100 || target.position.z < -100) {
-		targetvel.z = -targetvel.z;
-	}
-}
-
 		</script>
 		
 	</body>
